@@ -3,6 +3,7 @@
   <cell title="物品名称" :value="name"></cell>
   <cell title="当前状态" :value="getStatus(status)"></cell>
   <cell title="所在位置" :value="location"></cell>
+  <cell title="发布者" :value="itemusername"></cell>
   <cell title="联系方式" :value="contact"></cell>
   <card :header="{title:'物品详情'}">
     <p slot="content" class="card-padding">{{ description }}</p>
@@ -60,6 +61,7 @@ export default {
       contact: '',
       location: '',
       itemuser: '',
+      itemusername: '',
       isDisabled: false,
       showCancel: false,
       showSuccess: false,
@@ -81,6 +83,10 @@ export default {
       this.contact = object.get('contact')
       this.location = object.get('location')
       this.itemuser = object.get('user').id
+      query = new window.Bmob.Query(window.Bmob.User)
+      query.get(object.get('user').id).then((man) => {
+        this.itemusername = man.get('username')
+      })
     }, (object, error) => {
       console.log('查询失败: ' + error.code + ' ' + error.message)
     })
