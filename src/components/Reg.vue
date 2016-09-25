@@ -4,33 +4,23 @@
   <x-input title="密码" name="password" type="password" placeholder="请输入密码" :value.sync="password"></x-input>
   <x-input title="密码确认" type="password" placeholder="请再次输入密码" :equal-with="password"></x-input>
   <x-input title="邮箱" name="email" placeholder="请输入邮箱地址" is-type="email" :value.sync="email"></x-input>
+  <cell title="头像上传">
+    <input id="fileUpload" type="file" accept="image/*" value="浏览文件" />
+  </cell>
   <x-button type="primary" :text="btnText" :disabled="isDisabled" @click="click"></x-button>
   <x-button type="default" text="返回登录" @click="login"></x-button>
   <toast :show.sync="showSuccess">注册成功</toast>
   <toast :show.sync="showCancel" type="cancel">注册失败</toast>
-  <div>
-    <tabbar>
-      <tabbar-item link="/">
-        <img slot="icon" src="https://o84lhz5xo.qnssl.com/master/src/assets/demo/icon_nav_cell.png">
-        <span slot="label">列表</span>
-      </tabbar-item>
-      <tabbar-item selected link="/user">
-        <img slot="icon" src="https://o84lhz5xo.qnssl.com/master/src/assets/demo/icon_nav_article.png">
-        <span slot="label">我的</span>
-      </tabbar-item>
-    </tabbar>
-  </div>
 </template>
 
 <script>
-import { Cell, XHeader, Tabbar, TabbarItem, XInput, XButton, Toast, Group } from 'vux/src/components'
+import { Cell, XHeader, XInput, XButton, Toast, Group } from 'vux/src/components'
+import $ from 'jquery'
 
 export default {
   components: {
     Cell,
     XHeader,
-    Tabbar,
-    TabbarItem,
     XInput,
     XButton,
     Toast,
@@ -59,11 +49,27 @@ export default {
       user.set('username', this.username)
       user.set('password', this.password)
       user.set('email', this.email)
+      user.set('admin', false)
+      user.set('unread', 0)
+      let fileUploadControl = $('#fileUpload')[0]
+      let file = fileUploadControl.files[0]
+      let name = file.name
+      let fileobj = new window.Bmob.File(name, file)
       user.signUp(null).then((user) => {
+        user.set('image', fileobj)
+        user.save()
         this.showSuccess = true
         this.isDisabled = false
         this.btnText = '注册'
         console.log(this.user)
+        window.BmobSocketIo.initialize('b5bca53e8b7e474ae626d2d557dc9f78')
+        window.BmobSocketIo.updateTable('_User')
+        window.BmobSocketIo.onUpdateTable = this.$parent.socketon
+        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': user.id, 'content': '欢迎您使用电子废弃物再利用系统！如有使用问题，请直接向我发送消息，工作人员将在72小时内处理！'}).then((result) => {
+          console.log(result)
+        }, (error) => {
+          console.log('Error!' + error)
+        })
         this.$router.go('user')
       }, (user, error) => {
         this.showCancel = true
@@ -78,6 +84,3 @@ export default {
   }
 }
 </script>
-
-<style>
-</style>
