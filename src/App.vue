@@ -33,7 +33,8 @@
       return {
         msg: 'Hello World!',
         unread: '',
-        image: ''
+        image: '',
+        defaultimage: {}
       }
     },
     created () {
@@ -74,10 +75,17 @@
       reloaduser: function () {
         let query = new window.Bmob.Query(window.Bmob.User)
         query.get(window.user).then((object) => {
+          query.get('YZeiFFFI').then((obj) => {
+            this.defaultimage._url = 'http://bmob-cdn-6443.b0.upaiyun.com/2016/09/27/8670bde64038181e806a9e05a8df01e1.jpg'
+            if (!object.get('image')) {
+              this.image = obj.get('image')._url
+            } else {
+              this.image = object.get('image')._url
+            }
+          })
           if (object.get('unread') !== 0) {
             this.unread = object.get('unread') + ''
           }
-          this.image = object.get('image')._url
         }, (object, error) => {
           console.log('Query Wrong')
         })

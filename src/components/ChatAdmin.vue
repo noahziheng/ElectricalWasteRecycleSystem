@@ -52,8 +52,7 @@ export default {
         menu2: '删除此聊天'
       },
       showMenus: false,
-      show: false,
-      itemname: ''
+      show: false
     }
   },
   ready () {
@@ -63,6 +62,9 @@ export default {
     let query = new window.Bmob.Query(window.Bmob.User)
     query.get(this.$route.params.id).then((object) => {
       this.from = object
+      if (!object.get('image')) {
+        object.set('image', this.$parent.defaultimage)
+      }
       window.Bmob.Image.thumbnail({'image': object.get('image')._url, 'mode': 0, 'quality': 100, 'width': 100}).then((obj) => {
         this.fromimg = 'http://file.bmob.cn/' + obj.url
       })
@@ -70,6 +72,7 @@ export default {
         this.to = object
         window.Bmob.Image.thumbnail({'image': object.get('image')._url, 'mode': 0, 'quality': 100, 'width': 100}).then((obj) => {
           this.toimg = 'http://file.bmob.cn/' + obj.url
+          window.userobj.image = 'http://file.bmob.cn/' + obj.url
         })
         let Chat = window.Bmob.Object.extend('chat')
         let other = new window.Bmob.Query(Chat)
@@ -111,15 +114,6 @@ export default {
             }
             this.msglist.push(tmp)
           }
-          // Item
-          if (this.$route.params.item) {
-            let Items = window.Bmob.Object.extend('items')
-            this.query = new window.Bmob.Query(Items)
-            this.query.get(this.$route.params.item).then((obj) => {
-              this.itemname = '通过物品 ' + obj.get('name') + ' 进入对话'
-              this.msglist.push({id: object.id, type: 'system', content: this.itemname})
-            })
-          }
         }, (error) => {
           console.log('查询失败: ' + error.code)
         })
@@ -141,9 +135,6 @@ export default {
     },
     send (msg) {
       // 调用云逻辑实现发送
-      if (this.itemname !== '') {
-        msg = this.itemname + '#system#' + msg
-      }
       window.Bmob.Cloud.run('sendmsg', {'from': this.to.id, 'to': this.from.id, 'content': msg}).then((result) => {
         console.log(result)
         this.msglist.push({type: 'self', content: msg})

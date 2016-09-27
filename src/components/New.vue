@@ -13,8 +13,8 @@
     <cell title="成色自评">
       <rater :value.sync="rate" slot="value" star="☻" active-color="#FF9900" :margin="5"></rater>
     </cell>
-    <x-number :value.sync="lifetime" title="已使用年限" :step="0.5"></x-number>
-    <x-number :value.sync="price" title="理想价格" :min="0.5" :max="100000" :step="0.5">元</x-number>
+    <x-number :value.sync="lifetime" title="已使用年限" :min="0" :max="1000" :step="0.5"></x-number>
+    <x-number :value.sync="price" title="理想价格" :min="0.5" :step="0.5">元</x-number>
     <address title="所在位置" :value.sync="location" :list="addressData" placeholder="请选择地址"></address>
     <x-input title="联系方式" name="contact" placeholder="请输入联系方式（限手机号）" :value.sync="contact" keyboard="number" is-type="china-mobile"></x-input>
     <cell title="图片上传">
@@ -148,7 +148,7 @@ export default {
         this.showSuccess = true
         this.isDisabled = false
         this.btnText = '提交'
-        this.$router.go('/user')
+        this.$router.go('/')
         console.log('create object success, object id:' + object.id)
       },
       (model, error) => {

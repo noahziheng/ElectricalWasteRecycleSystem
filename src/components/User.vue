@@ -78,7 +78,7 @@ export default {
       let Items = window.Bmob.Object.extend('items')
       let query = new window.Bmob.Query(Items)
       query.equalTo('user', window.userobj)
-      query.ascending('createdAt')
+      query.ascending('-createdAt')
       // 查询所有数据
       query.find().then((results) => {
         let temp = []
@@ -93,27 +93,27 @@ export default {
           temp.push(tmp)
         }
         this.items = temp
+        this.isLogin = true
+        this.user = window.userobj
+        if (this.$parent.image === '') {
+          query = new window.Bmob.Query(window.Bmob.User)
+          query.get(window.user).then((object) => {
+            window.Bmob.Image.thumbnail({'image': 'http://bmob-cdn-6443.b0.upaiyun.com/2016/09/27/8670bde64038181e806a9e05a8df01e1.jpg', 'mode': 0, 'quality': 100, 'width': 800}).then((obj) => {
+              this.image = 'http://file.bmob.cn/' + obj.url
+            })
+          }, (object, error) => {
+            console.log('Query Wrong')
+          })
+        } else {
+          window.Bmob.Image.thumbnail({'image': this.$parent.image, 'mode': 0, 'quality': 100, 'width': 800}).then((obj) => {
+            this.image = 'http://file.bmob.cn/' + obj.url
+          })
+        }
+        // Chat
+        this.chatparse()
       }, (error) => {
         console.log('查询失败: ' + error.code + ' ' + error.message)
       })
-      this.isLogin = true
-      this.user = window.userobj
-      if (this.$parent.image === '') {
-        query = new window.Bmob.Query(window.Bmob.User)
-        query.get(window.user).then((object) => {
-          window.Bmob.Image.thumbnail({'image': object.get('image')._url, 'mode': 0, 'quality': 100, 'width': 800}).then((obj) => {
-            this.image = 'http://file.bmob.cn/' + obj.url
-          })
-        }, (object, error) => {
-          console.log('Query Wrong')
-        })
-      } else {
-        window.Bmob.Image.thumbnail({'image': this.$parent.image, 'mode': 0, 'quality': 100, 'width': 800}).then((obj) => {
-          this.image = 'http://file.bmob.cn/' + obj.url
-        })
-      }
-      // Chat
-      this.chatparse()
     } else {
       console.log('No Login')
     }
@@ -129,6 +129,9 @@ export default {
       this.isDisabled = true
       this.btnText = '登录中...'
       window.Bmob.User.logIn(this.username, this.password).then((user) => {
+        if (!user.get('image')) {
+          user.set('image', this.$parent.defaultimage)
+        }
         this.showSuccess = true
         this.isDisabled = false
         this.btnText = '登录'
@@ -211,6 +214,7 @@ export default {
         for (let k = 0; k < temp.length; k++) {
           temp[k].unread += ''
         }
+        console.log(temp)
         this.chats = temp
       }, (error) => {
         // 查询失败

@@ -1,5 +1,7 @@
 <template>
   <x-header :left-options="{showBack: true}">物品详情</x-header>
+  <panel v-if="receiveGroup && status === 2" :list="[{title: '此物品已被回收！',desc: '回收单位是 ' + receiveGroup + ' ' + receiveContact}]" type="2"></panel>
+  <panel v-if="status === 3" :list="[{title: '此物品的交易已完成！'}]" type="2"></panel>
   <cell title="物品名称" :value="name"></cell>
   <cell title="物品分类"><badge :text="group"></badge></cell>
   <cell title="当前状态" :value="$root.getStatus(status)"></cell>
@@ -14,7 +16,7 @@
   <card :header="{title:'物品详情'}">
     <p slot="content" class="card-padding">{{ description }}</p>
   </card>
-  <card :header="{title:'物品图片'}">
+  <card v-show="image" :header="{title:'物品图片'}">
     <img :src="image" slot="content" style="width:100%;height:auto" />
   </card>
   <template v-if="user === itemuser">
@@ -43,31 +45,32 @@
   <toast :show.sync="showSuccess">提交成功</toast>
   <toast :show.sync="showCancel" type="cancel">提交失败</toast>
   <confirm :show.sync="showConfirm" title="删除确认" @on-confirm="delitem" confirm-text="确认" cancel-text="取消"><p style="text-align:center;">是否确定删除?</p></confirm>
-  <div>
+  <div v-if="status === 1">
     <dialog :show.sync="showDialog" class="dialog-demo">
       <p class="dialog-title">接受回收</p>
       <group>
         <selector placeholder="请选择回收单位" title="回收单位" :options="grouplist" :value.sync="receiveGroup"></selector>
       </group>
       <x-button type="default" text="提交" @click="accept"></x-button>
-      <span class="vux-close" @click="show=false"></span>
+      <span class="vux-close" @click="showDialog=false"></span>
     </dialog>
   </div>
-  <div>
+  <div v-if="status === 1">
     <dialog :show.sync="showRefuse" class="dialog-demo">
       <p class="dialog-title">拒绝回收</p>
       <x-input title="理由" name="name" placeholder="请输入理由" :value.sync="reason"></x-input>
       <x-button type="default" text="提交" @click="refuse"></x-button>
-      <span class="vux-close" @click="show=false"></span>
+      <span class="vux-close" @click="showRefuse=false"></span>
     </dialog>
   </div>
 </template>
 
 <script>
-import { Dialog, Cell, XHeader, XInput, XButton, Toast, Group, Card, Confirm, Rater, Divider, Selector, Badge } from 'vux/src/components'
+import { Panel, Dialog, Cell, XHeader, XInput, XButton, Toast, Group, Card, Confirm, Rater, Divider, Selector, Badge } from 'vux/src/components'
 
 export default {
   components: {
+    Panel,
     Dialog,
     Cell,
     XHeader,
@@ -118,7 +121,9 @@ export default {
     }
   },
   ready () {
-    this.isAdmin = window.userobj.get('admin')
+    if (window.user) {
+      this.isAdmin = window.userobj.get('admin')
+    }
     let Items = window.Bmob.Object.extend('items')
     // 创建查询对象，入口参数是对象类的实例
     let query = new window.Bmob.Query(Items)
@@ -136,14 +141,19 @@ export default {
       this.price = object.get('price')
       this.lifetime = object.get('lifetime')
       this.group = object.get('group')
-      console.log(object.get('image'))
+      if (object.get('receiveGroup')) {
+        this.receiveGroup = object.get('receiveGroup').split(' ')[0]
+        this.receiveContact = object.get('receiveGroup').split(' ')[1]
+      }
       query = new window.Bmob.Query(window.Bmob.User)
       query.get(object.get('user').id).then((man) => {
         this.itemusername = man.get('username')
       })
-      window.Bmob.Image.thumbnail({'image': object.get('image')._url, 'mode': 0, 'quality': 100, 'width': 800}).then((obj) => {
-        this.image = 'http://file.bmob.cn/' + obj.url
-      })
+      if (object.get('image')) {
+        window.Bmob.Image.thumbnail({'image': object.get('image')._url, 'mode': 0, 'quality': 100, 'width': 800}).then((obj) => {
+          this.image = 'http://file.bmob.cn/' + obj.url
+        })
+      }
     }, (object, error) => {
       console.log('查询失败: ' + error.code + ' ' + error.message)
     })
@@ -166,12 +176,12 @@ export default {
         this.status = 3
         this.showSuccess = true
         // this.$router.go('/user')
-        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': window.user, 'content': '您的物品 ' + this.name + ' 的交易已被设为完成状态，感谢您的使用！'}).then((result) => {
+        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': object.get('user').id, 'content': '您的物品 ' + this.name + ' 的交易已被设为完成状态，感谢您的使用！'}).then((result) => {
           console.log(result)
         }, (error) => {
           console.log('Error!' + error)
         })
-        window.Bmob.Cloud.run('sendmsg', {'from': window.user, 'to': 'YZeiFFFI', 'content': '物品 ' + this.name + ' 的交易已被报告完成！'}).then((result) => {
+        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': 'YZeiFFFI', 'content': '物品 ' + this.name + ' 的交易已被报告完成！'}).then((result) => {
           console.log(result)
         }, (error) => {
           console.log('Error!' + error)
@@ -194,7 +204,7 @@ export default {
         this.showSuccess = true
         this.status = 1
         // this.$router.go('/user')
-        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': window.user, 'content': '您的物品 ' + this.name + ' 的回收单已提交，请等待回收单位受理！'}).then((result) => {
+        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': object.get('user').id, 'content': '您的物品 ' + this.name + ' 的回收单已提交，请等待回收单位受理！'}).then((result) => {
           console.log(result)
         }, (error) => {
           console.log('Error!' + error)
@@ -215,7 +225,7 @@ export default {
         object.destroy((object) => {
           this.showSuccess = true
           this.$router.go('/')
-          window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': window.user, 'content': '您的物品 ' + this.name + ' 已被删除，如不是本人操作，请立即联系客服进行申诉！'}).then((result) => {
+          window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': object.get('user').id, 'content': '您的物品 ' + this.name + ' 已被删除，如不是本人操作，请立即联系客服进行申诉！'}).then((result) => {
             console.log(result)
           }, (error) => {
             console.log('Error!' + error)
@@ -238,7 +248,6 @@ export default {
       query.get(this.$route.params.id).then((object) => {
       // 查询成功，调用get方法获取对应属性的值
         object.set('status', 2)
-        object.save()
         this.showSuccess = true
         this.status = 2
         // this.$router.go('/user')
@@ -247,7 +256,9 @@ export default {
             this.receiveContact = this.contactList[i]
           }
         }
-        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': window.user, 'content': '您的物品 ' + this.name + ' 的回收单已受理，回收单位是 ' + this.receiveGroup + '，联系电话：' + this.receiveContact + '，请保持电话畅通，回收单位将在72小时内与您商定回收细节！'}).then((result) => {
+        object.set('receiveGroup', this.receiveGroup + ' ' + this.receiveContact)
+        object.save()
+        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': object.get('user').id, 'content': '您的物品 ' + this.name + ' 的回收单已受理，回收单位是 ' + this.receiveGroup + '，联系电话：' + this.receiveContact + '，请保持电话畅通，回收单位将在72小时内与您商定回收细节！'}).then((result) => {
           console.log(result)
         }, (error) => {
           console.log('Error!' + error)
@@ -271,7 +282,7 @@ export default {
         this.showSuccess = true
         this.status = 0
         // this.$router.go('/user')
-        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': window.user, 'content': '您的物品 ' + this.name + ' 的回收单已被拒绝，原因是 ' + this.reason + '，如有疑问请向客服申诉！'}).then((result) => {
+        window.Bmob.Cloud.run('sendmsg', {'from': 'YZeiFFFI', 'to': object.get('user').id, 'content': '您的物品 ' + this.name + ' 的回收单已被拒绝，原因是 ' + this.reason + '，如有疑问请向客服申诉！'}).then((result) => {
           console.log(result)
         }, (error) => {
           console.log('Error!' + error)

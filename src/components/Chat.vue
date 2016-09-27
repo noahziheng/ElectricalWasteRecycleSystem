@@ -75,6 +75,9 @@ export default {
     }
     query.get(this.$route.params.id).then((object) => {
       this.from = object
+      if (!object.get('image')) {
+        object.set('image', this.$parent.defaultimage)
+      }
       window.Bmob.Image.thumbnail({'image': object.get('image')._url, 'mode': 0, 'quality': 100, 'width': 100}).then((obj) => {
         this.fromimg = 'http://file.bmob.cn/' + obj.url
       })
@@ -192,6 +195,11 @@ export default {
       }
       window.Bmob.Cloud.run('sendmsg', {'from': this.to.id, 'to': this.from.id, 'content': msg}).then((result) => {
         console.log(result)
+        let system = msg.split('#system#')
+        if (system.length === 2) {
+          this.itemname = ''
+          msg = system[1]
+        }
         this.msglist.push({type: 'self', content: msg})
         this.showSuccess = true
       }, (error) => {

@@ -4,7 +4,7 @@
   <x-input title="密码" name="password" type="password" placeholder="请输入密码" :value.sync="password"></x-input>
   <x-input title="密码确认" type="password" placeholder="请再次输入密码" :equal-with="password"></x-input>
   <x-input title="邮箱" name="email" placeholder="请输入邮箱地址" is-type="email" :value.sync="email"></x-input>
-  <cell title="头像上传">
+  <cell title="头像上传"  inline-desc="建议您上传头像获得更好体验">
     <input id="fileUpload" type="file" accept="image/*" value="浏览文件" />
   </cell>
   <x-button type="primary" :text="btnText" :disabled="isDisabled" @click="click"></x-button>
@@ -53,11 +53,12 @@ export default {
       user.set('unread', 0)
       let fileUploadControl = $('#fileUpload')[0]
       let file = fileUploadControl.files[0]
-      let name = file.name
-      let fileobj = new window.Bmob.File(name, file)
-      user.signUp(null).then((user) => {
+      if (fileUploadControl.files.length > 0) {
+        let name = file.name
+        let fileobj = new window.Bmob.File(name, file)
         user.set('image', fileobj)
-        user.save()
+      }
+      user.signUp(null).then((user) => {
         this.showSuccess = true
         this.isDisabled = false
         this.btnText = '注册'
@@ -75,7 +76,7 @@ export default {
         this.showCancel = true
         this.isDisabled = false
         this.btnText = '注册'
-        console.log('Error!' + error)
+        console.log('Error!')
       })
     },
     login: function () {
